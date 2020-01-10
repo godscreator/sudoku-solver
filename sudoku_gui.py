@@ -1,5 +1,6 @@
 import os
 import pygame
+import sudoku
 pygame.init()
 
 
@@ -112,6 +113,9 @@ pygame.display.set_caption('Sudoku')
 
 clock = pygame.time.Clock()
 run = True
+solve = False
+ss = sudoku.sudoku_solver(M,is_pausable=True)
+reset = False
 
 display.fill((255,255,255))
 
@@ -131,14 +135,32 @@ while run:
         for k in range(len(num_keys)):
             if key_press[num_keys[k]]==1:
                 i = k
-        if click[0]==1:
-            B.mouse_select_grid(mouse[0],mouse[1])
-        if i==-1:
-            B.key_select_grid(key_press[pygame.K_UP],key_press[pygame.K_DOWN],
-                              key_press[pygame.K_RIGHT],key_press[pygame.K_LEFT])
+        if key_press[pygame.K_SPACE]==1:
+            solve = True
+        elif key_press[pygame.K_r]==1:
+            reset = True
+        if not (solve or reset):
+            if click[0]==1:
+                B.mouse_select_grid(mouse[0],mouse[1])
+            if i==-1:
+                B.key_select_grid(key_press[pygame.K_UP],key_press[pygame.K_DOWN],
+                                  key_press[pygame.K_RIGHT],key_press[pygame.K_LEFT])
+            else:
+                B.change_sel_grid(B.S[i])
+    if solve:
+        q = next(ss)
+        if not(q==1 or q==-1):
+            B.index_select_grid(q[1],q[0])
+            B.change_sel_grid(q[2])
         else:
-            B.change_sel_grid(B.S[i])
-        #print(event)
+            solve = False
+            M = [[B.initial_state[i][j] for j in range(9)]for i in range(9)]
+            ss = sudoku.sudoku_solver(M,is_pausable=True)
+    elif reset:
+        M = [[B.initial_state[i][j] for j in range(9)]for i in range(9)]
+        B.set_from(display,M)
+        ss = sudoku.sudoku_solver(M,is_pausable=True)
+        reset = False
 
     B.update(display)
     pygame.display.update()
