@@ -1,135 +1,121 @@
-def input_sudoku(n = 3):
+def input_sudoku():
     M = []
-    for i in range(n*n):
+    for i in range(9):
         k = input().split()
-        if len(k)!=n*n:
+        if len(k)!=9:
             raise Exception("Not a valid sudoku.")
         M.append(k)
     return M
 
-def print_sudoku(M,n = 3):
-    for i in range(n*n):
+def print_sudoku(M):
+    for i in range(9):
         print(' '.join(M[i]))
     print()
-def is_valid_move(M,i,j,k,n = 3,c = '-' ,S = "123456789"):
-    x1 = S[k] in M[i]
-    if not x1:
-        x2 = False
-        for q in range(n*n):
-            if S[k]==M[q][j]:
-                x2 = True
+
+class solver:
+    def __init__(self):
+        self.M = [["-"]*9 for i in range(9)]
+        self.S = "123456789-"
+
+    def set_from(self,M):
+        self.M = [[M[i][j] for j in range(9)]for i in range(9)]
+        
+    def is_valid_move(self,i,j,k):
+        x1 = False
+        for r in range(9):
+            if r!=j and self.S[k]==self.M[i][r]:
+                x1 = True
                 break
-        if not x2:
-            x3 = False
-            for q in range(n*(i//n),n*(i//n)+n):
-                for r in range(n*(j//n),n*(j//n)+n):
-                    if S[k]== M[q][r]:
-                        x3 = True
+        if not x1:
+            x2 = False
+            for q in range(9):
+                if q!=i and self.S[k]==self.M[q][j]:
+                    x2 = True
+                    break
+            if not x2:
+                x3 = False
+                for q in range(3*(i//3),3*(i//3)+3):
+                    for r in range(3*(j//3),3*(j//3)+3):
+                        if not(q==i and r==j) and self.S[k]== self.M[q][r]:
+                            x3 = True
+                        if x3:
+                            break
                     if x3:
                         break
-                if x3:
-                    break
-            if not x3:
-                return True
-    return False
+                if not x3:
+                    return True
+        return False
     
-def next_move(M,n = 3,c = '-' ,S = "123456789",sr=0,sc=0,sk=-1):
-    """ to search for empty box
-        sr,sc,sk is starting row , col index
-        and  index in S  to search.
-        if game is completed then returns (n*n,n*n,len(S))
-        if no next move is possible return (-1,-1,-1)
-        nodes represented by tuple(r,c,v)
-        where r is row index, c is column index in M
-        and v is values index in S are returned"""
-    for i in range(sr,n*n):
-        ssc = sc if i==sr else 0
-        for j in range(ssc,n*n):
-            if M[i][j]==c:
-                m = sk+1 if i==sr and j==sc else 0
-                for k in range(m,len(S)):
-                    if is_valid_move(M,i,j,k,n,c,S):
-                                return (i,j,k)
-                return (-1,-1,-1)
-    return (n*n,n*n,len(S))
+    def next_move(self,sr=0,sc=0,sk=-1):
+        """ searches for next valid move"""
+        for i in range(sr,9):
+            ssc = sc if i==sr else 0
+            for j in range(ssc,9):
+                if self.M[i][j]==self.S[-1]:
+                    m = sk+1 if i==sr and j==sc else 0
+                    for k in range(m,9):
+                        if self.is_valid_move(i,j,k):
+                            return (i,j,k)
+                    return (-1,-1,-1) # no valid move possible for next empty box
+        return (9,9,9) # game completed.
     
-def sudoku_solver_inner(M,n = 3,c = '-' ,S = "123456789",is_pausable=False):
-    """this function will use dfs search for solving
-        sudoku
-        n is size of smaller grids"""
-    st = []
-    nm = next_move(M,n,c,S,0,0,-1)
-    if nm!=(-1,-1,-1) and nm!=(n*n,n*n,len(S)):
-        M[nm[0]][nm[1]]=S[nm[2]]
-        if is_pausable:
-            yield nm[0],nm[1],S[nm[2]]
-        st.append(nm)
-    while st:
-        nm = next_move(M,n,c,S,nm[0],nm[1],nm[2])
-        if nm == (-1,-1,-1):
-            nm = st.pop()
-            M[nm[0]][nm[1]]=c
+    def sudoku_solver_inner(self,is_pausable=False):
+        """this function will use dfs search for solving
+            sudoku
+            n is size of smaller grids"""
+        st = []
+        nm = self.next_move(0,0,-1)
+        if nm!=(-1,-1,-1) and nm!=(9,9,9):
+            self.M[nm[0]][nm[1]]=self.S[nm[2]]
             if is_pausable:
-                yield nm[0],nm[1],c
-            nm = next_move(M,n,c,S,nm[0],nm[1],nm[2])
-            while st and nm==(-1,-1,-1):
-                nm = st.pop()
-                M[nm[0]][nm[1]]=c
-                if is_pausable:
-                    yield nm[0],nm[1],c
-                nm = next_move(M,n,c,S,nm[0],nm[1],nm[2])
-            if nm==(-1,-1,-1):
-                yield -1
-            else:
-                M[nm[0]][nm[1]]=S[nm[2]]
-                if is_pausable:
-                    yield nm[0],nm[1],S[nm[2]]
-                st.append(nm)
-        elif nm == (n*n,n*n,len(S)):
-            yield 1
-        else:
-            M[nm[0]][nm[1]]=S[nm[2]]
-            if is_pausable:
-                yield nm[0],nm[1],S[nm[2]]
+                yield nm[0],nm[1],self.S[nm[2]]
             st.append(nm)
+        while st:
+            nm = self.next_move(nm[0],nm[1],nm[2])
+            if nm == (-1,-1,-1):
+                nm = st.pop()
+                self.M[nm[0]][nm[1]]=self.S[-1]
+                if is_pausable:
+                    yield nm[0],nm[1],self.S[-1]
+                nm = self.next_move(nm[0],nm[1],nm[2])
+                while st and nm==(-1,-1,-1):
+                    nm = st.pop()
+                    self.M[nm[0]][nm[1]]=self.S[-1]
+                    if is_pausable:
+                        yield nm[0],nm[1],self.S[-1]
+                    nm = self.next_move(nm[0],nm[1],nm[2])
+                if nm==(-1,-1,-1):
+                    yield -1
+                else:
+                    self.M[nm[0]][nm[1]]=self.S[nm[2]]
+                    if is_pausable:
+                        yield nm[0],nm[1],self.S[nm[2]]
+                    st.append(nm)
+            elif nm == (9,9,9):
+                yield 1
+            else:
+                self.M[nm[0]][nm[1]]=self.S[nm[2]]
+                if is_pausable:
+                    yield nm[0],nm[1],self.S[nm[2]]
+                st.append(nm)
     
-def sudoku_solver(M,n = 3,c = '-' ,S = "123456789",is_pausable=False):
-    if is_pausable:
-        return sudoku_solver_inner(M,n,c,S,is_pausable)
-    else:
-        k = sudoku_solver_inner(M,n,c,S,is_pausable)
-        if next(k)==1:
-            return True
+    def solve(self,is_pausable=False):
+        if is_pausable:
+            return self.sudoku_solver_inner(is_pausable)
         else:
-            return False
+            k = self.sudoku_solver_inner(is_pausable)
+            if next(k)==1:
+                return True
+            else:
+                return False
         
 if __name__ == "__main__":
-##    M = input_sudoku()
-    M = ["2 4 - - - - 1 - 7",
-         "6 - 8 9 1 5 3 - 2",
-         "9 - - - 2 7 - 6 -",
-         "- 9 7 1 3 2 6 - 5",
-         "- - - 5 - 8 - 3 4",
-         "5 - - - - - - - -",
-         "7 - 2 3 - 9 8 - 1",
-         "- - - 8 - - - - -",
-         "- 1 9 - - - 4 7 -"]
-    M = [M[i].split() for i in range(9)]
-##    M = """5 3 - - 7 - - - -
-##6 - - 1 9 5 - - -
-##- 9 8 - - - - 6 -
-##8 - - - 6 - - - 3
-##4 - - 8 - 3 - - 1
-##7 - - - 2 - - - 6
-##- 6 - - - - 2 8 -
-##- - - 4 1 9 - - 5
-##- - - - 8 - - 7 9"""
-##    M = M.split()
-##    M = [ M[9*i:9*i+9] for i in range(9)]
-    #print_sudoku(M)
-    k = sudoku_solver(M)
+    M = input_sudoku()
+    s = solver()
+    s.set_from(M)
+    k = s.solve()
     if k:
-        print_sudoku(M)
+        print_sudoku(s.M)
     else:
         print("Not solvable")
     
